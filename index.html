@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sam's High/Low Gambling Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0f;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 30px 16px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+  }
+
+  .terminal {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 680px;
+    box-shadow: 0 0 40px rgba(0,200,100,0.08), 0 0 0 1px #21262d;
+    overflow: hidden;
+  }
+
+  .term-bar {
+    background: #161b22;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #30363d;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.red { background: #ff5f56; }
+  .dot.yellow { background: #ffbd2e; }
+  .dot.green { background: #27c93f; }
+  .term-title { color: #8b949e; font-size: 13px; margin-left: 8px; font-family: inherit; }
+
+  .output {
+    padding: 20px;
+    min-height: 300px;
+    max-height: 520px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #c9d1d9;
+  }
+
+  .output::-webkit-scrollbar { width: 6px; }
+  .output::-webkit-scrollbar-track { background: #0d1117; }
+  .output::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  .line { display: block; white-space: pre-wrap; word-break: break-word; }
+  .line.green { color: #3fb950; }
+  .line.red { color: #f85149; }
+  .line.yellow { color: #e3b341; }
+  .line.cyan { color: #58a6ff; }
+  .line.bold { font-weight: bold; color: #ffffff; }
+  .line.dim { color: #8b949e; }
+  .line.divider { color: #30363d; }
+  .line.bonus { color: #d2a8ff; font-weight: bold; }
+
+  .hud {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    border-bottom: 1px solid #30363d;
+    padding: 10px 20px;
+    display: flex;
+    gap: 24px;
+    font-size: 13px;
+    color: #8b949e;
+  }
+  .hud span { color: #3fb950; font-weight: bold; }
+
+  .input-area {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0d1117;
+  }
+  .prompt { color: #3fb950; font-size: 14px; white-space: nowrap; }
+
+  input[type="text"], input[type="number"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #30363d;
+    color: #c9d1d9;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 4px 2px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-bottom-color: #3fb950; }
+
+  .btn-row {
+    padding: 0 20px 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button.primary {
+    background: #238636;
+    color: #fff;
+    border-color: #2ea043;
+  }
+  button.primary:hover { background: #2ea043; }
+  button.secondary {
+    background: #21262d;
+    color: #c9d1d9;
+  }
+  button.secondary:hover { background: #30363d; }
+  button.danger {
+    background: #da3633;
+    color: #fff;
+    border-color: #f85149;
+  }
+  button.danger:hover { background: #f85149; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="terminal">
+  <div class="term-bar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <span class="term-title">sam's_highlow.py — bash</span>
+  </div>
+
+  <div class="output" id="output"></div>
+
+  <div class="hud hidden" id="hud">
+    💰 Cash: $<span id="hud-cash">1000</span>
+    &nbsp;|&nbsp;
+    📈 Net: <span id="hud-net">$0</span>
+    &nbsp;|&nbsp;
+    🎲 Round: <span id="hud-round">1</span>
+  </div>
+
+  <div class="input-area" id="input-area">
+    <span class="prompt" id="prompt-label">&gt;</span>
+    <input type="text" id="user-input" autocomplete="off" autocorrect="off" spellcheck="false" />
+  </div>
+
+  <div class="btn-row" id="btn-row"></div>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const inputEl = document.getElementById('user-input');
+const inputArea = document.getElementById('input-area');
+const btnRow = document.getElementById('btn-row');
+const hud = document.getElementById('hud');
+const hudCash = document.getElementById('hud-cash');
+const hudNet = document.getElementById('hud-net');
+const hudRound = document.getElementById('hud-round');
+const promptLabel = document.getElementById('prompt-label');
+
+let state = {
+  phase: 'name',
+  name: '',
+  cash: 1000,
+  startingCash: 1000,
+  minVal: 1,
+  maxVal: 77,
+  firstNumber: 0,
+  magicNumber: 0,
+  currentBet: 0,
+  round: 1,
+  addedCash: 0
+};
+
+function print(text, cls = '') {
+  const el = document.createElement('span');
+  el.className = 'line' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+  output.appendChild(el);
+  output.appendChild(document.createElement('br'));
+  output.scrollTop = output.scrollHeight;
+}
+
+function clearButtons() { btnRow.innerHTML = ''; }
+
+function addButton(label, cls, onClick) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.className = cls;
+  btn.onclick = onClick;
+  btnRow.appendChild(btn);
+}
+
+function showInput(type = 'text', placeholder = '') {
+  inputArea.classList.remove('hidden');
+  inputEl.type = type;
+  inputEl.placeholder = placeholder;
+  inputEl.value = '';
+  inputEl.focus();
+}
+
+function hideInput() {
+  inputArea.classList.add('hidden');
+  clearButtons();
+}
+
+function updateHUD() {
+  hudCash.textContent = state.cash.toLocaleString();
+  const net = state.cash - state.startingCash;
+  hudNet.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toLocaleString();
+  hudNet.style.color = net >= 0 ? '#3fb950' : '#f85149';
+  hudRound.textContent = state.round;
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function calcMagicNumber() {
+  const r = randInt(1, 7 ** 7);
+  const s1 = String(r).split('').reduce((a, d) => a + parseInt(d), 0);
+  const s2 = String(s1).split('').reduce((a, d) => a + parseInt(d), 0);
+  return s2;
+}
+
+function handleInput(val) {
+  val = val.trim();
+  if (!val) return;
+  print('> ' + val, 'dim');
+
+  switch (state.phase) {
+    case 'name': handleName(val); break;
+    case 'difficulty': handleDifficulty(val); break;
+    case 'bet': handleBet(val); break;
+    case 'guess': handleGuess(val); break;
+    case 'addCash': handleAddCash(val); break;
+    case 'addCashAmt': handleAddCashAmt(val); break;
+    case 'playAgain': handlePlayAgain(val); break;
+  }
+}
+
+function handleName(val) {
+  state.name = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+  print('');
+  print('╔══════════════════════════════════════════╗', 'cyan');
+  print('║     WELCOME TO SAM\'S HIGH/LOW GAMBLING   ║', 'cyan');
+  print('╚══════════════════════════════════════════╝', 'cyan');
+  print('');
+  print('Choose your difficulty:', 'bold');
+  print('  1 → Easy   (1 – 77)', 'dim');
+  print('  2 → Medium (1 – 7,777)', 'dim');
+  print('  3 → Hard   (1 – 7,777,777)', 'dim');
+  print('');
+  state.phase = 'difficulty';
+  showInput('text', '1, 2, or 3');
+  clearButtons();
+  addButton('1  Easy', 'secondary', () => handleInput('1'));
+  addButton('2  Medium', 'secondary', () => handleInput('2'));
+  addButton('3  Hard', 'secondary', () => handleInput('3'));
+}
+
+function handleDifficulty(val) {
+  if (val === '1') { state.minVal = 1; state.maxVal = 77; print('Easy mode — numbers between 1 and 77.', 'yellow'); }
+  else if (val === '2') { state.minVal = 1; state.maxVal = 7777; print('Medium mode — numbers between 1 and 7,777.', 'yellow'); }
+  else if (val === '3') { state.minVal = 1; state.maxVal = 7777777; print('Hard mode — numbers between 1 and 7,777,777.', 'yellow'); }
+  else { print('Please enter 1, 2, or 3.', 'red'); return; }
+
+  print('Accessing profile for ' + state.name + '...', 'dim');
+  print('Cash available to wager: $' + state.cash.toLocaleString(), 'green');
+  hud.classList.remove('hidden');
+  updateHUD();
+  startRound();
+}
+
+function startRound() {
+  print('');
+  print('════════════════════════════════════════════', 'divider');
+  print('Round ' + state.round, 'bold');
+  state.phase = 'bet';
+  showInput('number', 'Enter bet amount');
+  clearButtons();
+  [10, 50, 100, 250].forEach(amt => {
+    if (amt <= state.cash)
+      addButton('$' + amt, 'secondary', () => handleInput(String(amt)));
+  });
+  if (state.cash > 0)
+    addButton('All In $' + state.cash, 'danger', () => handleInput(String(state.cash)));
+  promptLabel.textContent = 'Bet $:';
+}
+
+function handleBet(val) {
+  const bet = parseInt(val);
+  if (isNaN(bet) || bet <= 0) { print('Bet must be greater than $0.', 'red'); return; }
+  if (bet > state.cash) {
+    print('Not enough cash — capping bet at $' + state.cash + '.', 'yellow');
+    state.currentBet = state.cash;
+  } else {
+    state.currentBet = bet;
+  }
+
+  state.firstNumber = randInt(state.minVal, state.maxVal);
+  state.magicNumber = calcMagicNumber();
+
+  print('You are betting: $' + state.currentBet.toLocaleString(), 'yellow');
+  print('');
+  print('🎲 First Number: ' + state.firstNumber.toLocaleString(), 'bold');
+  print('');
+  print('Will the next number be HIGHER or LOWER?');
+  state.phase = 'guess';
+  showInput('text', 'high or low');
+  clearButtons();
+  addButton('⬆  High', 'primary', () => handleInput('high'));
+  addButton('⬇  Low', 'secondary', () => handleInput('low'));
+  promptLabel.textContent = '>';
+}
+
+function handleGuess(val) {
+  val = val.toLowerCase();
+  if (val !== 'high' && val !== 'low') { print('Please type "high" or "low".', 'red'); return; }
+
+  const secondNumber = randInt(state.minVal, state.maxVal);
+  print('Your guess: ' + val + 'er');
+  print('🎲 Second Number: ' + secondNumber.toLocaleString(), 'bold');
+  print('');
+
+  let won = false;
+  if (secondNumber === state.firstNumber) {
+    print('⚖️  It\'s a tie — no change.', 'yellow');
+  } else if (secondNumber > state.firstNumber && val === 'high') {
+    print('✅ YOU WIN! +$' + state.currentBet.toLocaleString(), 'green');
+    state.cash += state.currentBet;
+    won = true;
+  } else if (secondNumber < state.firstNumber && val === 'low') {
+    print('✅ YOU WIN! +$' + state.currentBet.toLocaleString(), 'green');
+    state.cash += state.currentBet;
+    won = true;
+  } else {
+    print('❌ YOU LOSE! -$' + state.currentBet.toLocaleString(), 'red');
+    state.cash -= state.currentBet;
+  }
+
+  // Magic number bonus
+  if (state.magicNumber === Math.abs(secondNumber - state.firstNumber)) {
+    const bonus = state.currentBet * state.magicNumber;
+    print('');
+    print('✨ MAGIC NUMBER BONUS! +$' + bonus.toLocaleString(), 'bonus');
+    state.cash += bonus;
+  }
+
+  print('');
+  print('Balance: $' + state.cash.toLocaleString() + '   |   Net: ' + (state.cash - state.startingCash >= 0 ? '+' : '') + '$' + (state.cash - state.startingCash).toLocaleString(), state.cash >= state.startingCash ? 'green' : 'red');
+  updateHUD();
+
+  if (state.cash <= 0) {
+    print('');
+    print('💸 You\'ve run out of cash!', 'red');
+    print('Game over, ' + state.name + '. Better luck next time!', 'bold');
+    hideInput();
+    clearButtons();
+    addButton('Play Again', 'primary', () => location.reload());
+    return;
+  }
+
+  state.round++;
+  print('');
+  print('Would you like to add cash to your balance?');
+  state.phase = 'addCash';
+  showInput('text', 'yes or no');
+  clearButtons();
+  addButton('Yes, add cash', 'secondary', () => handleInput('yes'));
+  addButton('No thanks', 'primary', () => handleInput('no'));
+  promptLabel.textContent = '>';
+}
+
+function handleAddCash(val) {
+  if (val === 'yes') {
+    state.phase = 'addCashAmt';
+    showInput('number', 'Amount to add');
+    clearButtons();
+    promptLabel.textContent = 'Add $:';
+  } else {
+    askPlayAgain();
+  }
+}
+
+function handleAddCashAmt(val) {
+  const amt = parseInt(val);
+  if (isNaN(amt) || amt <= 0) { print('Please enter a valid amount.', 'red'); return; }
+  state.cash += amt;
+  state.addedCash += amt;
+  print('Added $' + amt.toLocaleString() + ' — new balance: $' + state.cash.toLocaleString(), 'green');
+  updateHUD();
+  askPlayAgain();
+}
+
+function askPlayAgain() {
+  print('');
+  print('Play another round?');
+  state.phase = 'playAgain';
+  showInput('text', 'yes or no');
+  clearButtons();
+  addButton('Yes, keep playing!', 'primary', () => handleInput('yes'));
+  addButton('No, cash out', 'secondary', () => handleInput('no'));
+  promptLabel.textContent = '>';
+}
+
+function handlePlayAgain(val) {
+  if (val === 'yes') {
+    startRound();
+  } else {
+    print('');
+    print('Thanks for playing, ' + state.name + '!', 'bold');
+    print('Final balance: $' + state.cash.toLocaleString(), 'green');
+    print('Net change: ' + (state.cash - state.startingCash >= 0 ? '+' : '') + '$' + (state.cash - state.startingCash).toLocaleString(), state.cash >= state.startingCash ? 'green' : 'red');
+    print('');
+    print('Come back and try to beat the house! 🎰', 'cyan');
+    hideInput();
+    clearButtons();
+    addButton('Play Again', 'primary', () => location.reload());
+  }
+}
+
+// Boot
+print('Initializing Sam\'s High/Low Casino...', 'dim');
+print('');
+print('What is your name?');
+state.phase = 'name';
+showInput('text', 'Enter your name');
+promptLabel.textContent = '>';
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const val = inputEl.value.trim();
+    if (val) handleInput(val);
+    inputEl.value = '';
+  }
+});
+</script>
+</body>
+</html>
