@@ -5,179 +5,513 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sam's High/Low Gambling Game</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  :root {
+    --bg: #07090f;
+    --surface: #0d1117;
+    --surface2: #111820;
+    --border: #1e2a38;
+    --border2: #243040;
+    --green: #00e676;
+    --green-dim: #1a4a2e;
+    --red: #ff4444;
+    --red-dim: #3a1a1a;
+    --yellow: #ffd600;
+    --blue: #40c4ff;
+    --purple: #ce93d8;
+    --text: #c8d8e8;
+    --text-dim: #4a6070;
+    --text-bright: #eaf4ff;
+    --glow-green: 0 0 20px rgba(0,230,118,0.3);
+    --glow-red: 0 0 20px rgba(255,68,68,0.3);
+    --glow-yellow: 0 0 20px rgba(255,214,0,0.3);
+  }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #0a0a0f;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,100,60,0.12) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(30,42,56,0.3) 39px, rgba(30,42,56,0.3) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(30,42,56,0.15) 39px, rgba(30,42,56,0.15) 40px);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    padding: 30px 16px;
+    padding: 40px 16px;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
   }
 
+  /* ── Terminal Shell ── */
   .terminal {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
     width: 100%;
-    max-width: 680px;
-    box-shadow: 0 0 40px rgba(0,200,100,0.08), 0 0 0 1px #21262d;
+    max-width: 700px;
+    box-shadow:
+      0 0 0 1px rgba(0,230,118,0.06),
+      0 0 60px rgba(0,0,0,0.8),
+      0 0 100px rgba(0,230,118,0.04);
     overflow: hidden;
+    position: relative;
   }
 
+  /* Scanline overlay */
+  .terminal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 12px;
+  }
+
+  /* ── Title Bar ── */
   .term-bar {
-    background: #161b22;
-    padding: 10px 16px;
+    background: var(--surface2);
+    padding: 11px 16px;
     display: flex;
     align-items: center;
     gap: 8px;
-    border-bottom: 1px solid #30363d;
+    border-bottom: 1px solid var(--border);
+    position: relative;
   }
-  .dot { width: 12px; height: 12px; border-radius: 50%; }
-  .dot.red { background: #ff5f56; }
-  .dot.yellow { background: #ffbd2e; }
-  .dot.green { background: #27c93f; }
-  .term-title { color: #8b949e; font-size: 13px; margin-left: 8px; font-family: inherit; }
+  .dots { display: flex; gap: 7px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; transition: filter 0.2s; }
+  .dot.red    { background: #ff5f56; box-shadow: 0 0 6px rgba(255,95,86,0.5); }
+  .dot.yellow { background: #ffbd2e; box-shadow: 0 0 6px rgba(255,189,46,0.5); }
+  .dot.green  { background: #27c93f; box-shadow: 0 0 6px rgba(39,201,63,0.5); }
+  .term-title {
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    margin-left: 10px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .status-led {
+    margin-left: auto;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-led 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-led {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
 
+  /* ── Output Area ── */
   .output {
-    padding: 20px;
-    min-height: 300px;
-    max-height: 520px;
+    padding: 22px 24px 16px;
+    min-height: 280px;
+    max-height: 500px;
     overflow-y: auto;
     font-size: 14px;
-    line-height: 1.8;
-    color: #c9d1d9;
+    line-height: 1.85;
+    color: var(--text);
+    position: relative;
   }
-
-  .output::-webkit-scrollbar { width: 6px; }
-  .output::-webkit-scrollbar-track { background: #0d1117; }
-  .output::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+  .output::-webkit-scrollbar { width: 4px; }
+  .output::-webkit-scrollbar-track { background: transparent; }
+  .output::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
   .line { display: block; white-space: pre-wrap; word-break: break-word; }
-  .line.green { color: #3fb950; }
-  .line.red { color: #f85149; }
-  .line.yellow { color: #e3b341; }
-  .line.cyan { color: #58a6ff; }
-  .line.bold { font-weight: bold; color: #ffffff; }
-  .line.dim { color: #8b949e; }
-  .line.divider { color: #30363d; }
-  .line.bonus { color: #d2a8ff; font-weight: bold; }
+  .line.green  { color: var(--green); }
+  .line.red    { color: var(--red); }
+  .line.yellow { color: var(--yellow); }
+  .line.cyan   { color: var(--blue); }
+  .line.bold   { color: var(--text-bright); font-weight: bold; font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 0.05em; }
+  .line.dim    { color: var(--text-dim); }
+  .line.divider { color: var(--border2); }
+  .line.bonus  { color: var(--purple); font-weight: bold; }
+  .line.big    { font-family: 'VT323', monospace; font-size: 22px; letter-spacing: 0.04em; }
 
-  .hud {
-    background: #161b22;
-    border-top: 1px solid #30363d;
-    border-bottom: 1px solid #30363d;
-    padding: 10px 20px;
-    display: flex;
-    gap: 24px;
-    font-size: 13px;
-    color: #8b949e;
+  /* Typewriter effect for new lines */
+  .line.animate-in {
+    animation: fadeSlideIn 0.18s ease forwards;
   }
-  .hud span { color: #3fb950; font-weight: bold; }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
 
-  .input-area {
-    padding: 14px 20px;
+  /* ── HUD ── */
+  .hud {
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    gap: 0;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    align-items: center;
+  }
+  .hud-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: #0d1117;
+    gap: 7px;
+    padding: 0 18px;
+    border-right: 1px solid var(--border);
   }
-  .prompt { color: #3fb950; font-size: 14px; white-space: nowrap; }
+  .hud-item:first-child { padding-left: 0; }
+  .hud-item:last-child  { border-right: none; }
+  .hud-label { color: var(--text-dim); text-transform: uppercase; font-size: 10px; letter-spacing: 0.12em; }
+  .hud-val   { color: var(--green); font-weight: bold; font-size: 14px; transition: all 0.4s; }
+  .hud-val.bump {
+    animation: hud-bump 0.4s ease;
+  }
+  @keyframes hud-bump {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  /* ── Number Display ── */
+  .number-display {
+    display: flex;
+    gap: 20px;
+    padding: 16px 24px 4px;
+    align-items: center;
+  }
+  .num-card {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 14px 24px;
+    text-align: center;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .num-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+  }
+  .num-card .num-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .num-card .num-value {
+    font-family: 'VT323', monospace;
+    font-size: 40px;
+    color: var(--text-bright);
+    line-height: 1;
+    transition: all 0.3s;
+  }
+  .num-card.win  { border-color: var(--green); box-shadow: var(--glow-green), inset 0 0 30px rgba(0,230,118,0.05); }
+  .num-card.lose { border-color: var(--red);   box-shadow: var(--glow-red),  inset 0 0 30px rgba(255,68,68,0.05); }
+  .num-card.reveal .num-value {
+    animation: revealNum 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes revealNum {
+    from { transform: scale(0.4) rotateX(45deg); opacity: 0; }
+    to   { transform: scale(1) rotateX(0deg); opacity: 1; }
+  }
+
+  .vs-badge {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ── Input Area ── */
+  .input-area {
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .prompt { color: var(--green); font-size: 14px; white-space: nowrap; text-shadow: 0 0 8px var(--green); }
 
   input[type="text"], input[type="number"] {
     flex: 1;
     background: transparent;
     border: none;
-    border-bottom: 1px solid #30363d;
-    color: #c9d1d9;
-    font-family: inherit;
+    border-bottom: 1px solid var(--border2);
+    color: var(--text-bright);
+    font-family: 'Share Tech Mono', monospace;
     font-size: 14px;
-    padding: 4px 2px;
+    padding: 4px 4px;
     outline: none;
     transition: border-color 0.2s;
+    caret-color: var(--green);
   }
-  input:focus { border-bottom-color: #3fb950; }
+  input:focus { border-bottom-color: var(--green); }
+  input::placeholder { color: var(--text-dim); }
 
+  /* ── Buttons ── */
   .btn-row {
-    padding: 0 20px 16px;
+    padding: 12px 24px 18px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
   }
 
   button {
-    font-family: inherit;
-    font-size: 13px;
-    padding: 8px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.07em;
+    padding: 9px 20px;
     border-radius: 6px;
-    border: 1px solid #30363d;
+    border: 1px solid var(--border2);
     cursor: pointer;
     transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
   }
-  button.primary {
-    background: #238636;
-    color: #fff;
-    border-color: #2ea043;
+  button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
   }
-  button.primary:hover { background: #2ea043; }
-  button.secondary {
-    background: #21262d;
-    color: #c9d1d9;
-  }
-  button.secondary:hover { background: #30363d; }
-  button.danger {
-    background: #da3633;
-    color: #fff;
-    border-color: #f85149;
-  }
-  button.danger:hover { background: #f85149; }
-  button:disabled { opacity: 0.4; cursor: default; }
+  button:hover::after { background: rgba(255,255,255,0.05); }
+  button:active { transform: scale(0.97); }
 
-  .hidden { display: none !important; }
+  button.primary {
+    background: rgba(0,70,40,0.8);
+    color: var(--green);
+    border-color: rgba(0,230,118,0.4);
+    text-shadow: 0 0 8px rgba(0,230,118,0.5);
+    box-shadow: 0 0 16px rgba(0,230,118,0.1), inset 0 1px 0 rgba(0,230,118,0.1);
+  }
+  button.primary:hover {
+    background: rgba(0,100,55,0.9);
+    box-shadow: 0 0 24px rgba(0,230,118,0.2), inset 0 1px 0 rgba(0,230,118,0.2);
+  }
+  button.secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--border2);
+  }
+  button.secondary:hover { border-color: var(--text-dim); }
+  button.danger {
+    background: rgba(80,20,20,0.8);
+    color: var(--red);
+    border-color: rgba(255,68,68,0.4);
+    text-shadow: 0 0 8px rgba(255,68,68,0.4);
+    box-shadow: 0 0 16px rgba(255,68,68,0.1);
+  }
+  button.danger:hover {
+    background: rgba(110,25,25,0.9);
+    box-shadow: 0 0 24px rgba(255,68,68,0.2);
+  }
+  button.high-btn {
+    background: rgba(0,50,90,0.8);
+    color: var(--blue);
+    border-color: rgba(64,196,255,0.4);
+    text-shadow: 0 0 8px rgba(64,196,255,0.4);
+    box-shadow: 0 0 16px rgba(64,196,255,0.1);
+    font-size: 13px;
+    padding: 10px 28px;
+  }
+  button.high-btn:hover { background: rgba(0,70,110,0.9); box-shadow: 0 0 24px rgba(64,196,255,0.2); }
+  button.low-btn {
+    background: rgba(70,20,70,0.8);
+    color: var(--purple);
+    border-color: rgba(206,147,216,0.4);
+    text-shadow: 0 0 8px rgba(206,147,216,0.4);
+    box-shadow: 0 0 16px rgba(206,147,216,0.1);
+    font-size: 13px;
+    padding: 10px 28px;
+  }
+  button.low-btn:hover { background: rgba(90,25,90,0.9); box-shadow: 0 0 24px rgba(206,147,216,0.2); }
+  button:disabled { opacity: 0.35; cursor: default; }
+
+  /* ── Animations & Effects ── */
+
+  /* Win flash */
+  @keyframes win-flash {
+    0%   { background: rgba(0,230,118,0); }
+    20%  { background: rgba(0,230,118,0.12); }
+    100% { background: rgba(0,230,118,0); }
+  }
+  .flash-win { animation: win-flash 0.7s ease forwards; }
+
+  /* Lose flash */
+  @keyframes lose-flash {
+    0%   { background: rgba(255,68,68,0); }
+    20%  { background: rgba(255,68,68,0.1); }
+    100% { background: rgba(255,68,68,0); }
+  }
+  .flash-lose { animation: lose-flash 0.7s ease forwards; }
+
+  /* Bonus sparkle */
+  @keyframes bonus-flash {
+    0%   { background: rgba(206,147,216,0); }
+    20%  { background: rgba(206,147,216,0.12); }
+    100% { background: rgba(206,147,216,0); }
+  }
+  .flash-bonus { animation: bonus-flash 0.9s ease forwards; }
+
+  /* Shake for lose */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%  { transform: translateX(-6px); }
+    40%  { transform: translateX(6px); }
+    60%  { transform: translateX(-4px); }
+    80%  { transform: translateX(4px); }
+  }
+  .shake { animation: shake 0.45s ease; }
+
+  /* Slide up for win result */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide-up { animation: slideUp 0.3s ease forwards; }
+
+  /* Number card flip */
+  @keyframes cardFlip {
+    0%   { transform: perspective(400px) rotateY(-90deg); opacity: 0; }
+    100% { transform: perspective(400px) rotateY(0deg); opacity: 1; }
+  }
+  .flip-in { animation: cardFlip 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+  /* Coin scatter for win */
+  .coin {
+    position: fixed;
+    pointer-events: none;
+    font-size: 20px;
+    z-index: 999;
+    animation: coinFall var(--dur, 1.2s) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  @keyframes coinFall {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(var(--dy, 200px)) translateX(var(--dx, 0px)) rotate(var(--rot, 360deg)) scale(0); opacity: 0; }
+  }
+
+  /* Bust animation */
+  @keyframes bust {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 0.7; }
+  }
+
+  /* Round transition */
+  @keyframes roundIn {
+    from { opacity: 0; max-height: 0; }
+    to   { opacity: 1; max-height: 200px; }
+  }
+
+  /* Caret blink */
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .caret {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: var(--green);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* ── Footer hint ── */
+  .footer-hint {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    padding: 0 24px 14px;
+    opacity: 0.5;
+  }
 </style>
 </head>
 <body>
-<div class="terminal">
+<div class="terminal" id="terminal">
   <div class="term-bar">
-    <div class="dot red"></div>
-    <div class="dot yellow"></div>
-    <div class="dot green"></div>
-    <span class="term-title">sam's_highlow.py — bash</span>
+    <div class="dots">
+      <div class="dot red"></div>
+      <div class="dot yellow"></div>
+      <div class="dot green"></div>
+    </div>
+    <span class="term-title">sam's_highlow.exe — terminal</span>
+    <div class="status-led"></div>
   </div>
 
   <div class="output" id="output"></div>
 
-  <div class="hud hidden" id="hud">
-    💰 Cash: $<span id="hud-cash">1000</span>
-    &nbsp;|&nbsp;
-    📈 Net: <span id="hud-net">$0</span>
-    &nbsp;|&nbsp;
-    🎲 Round: <span id="hud-round">1</span>
+  <div class="number-display hidden" id="num-display">
+    <div class="num-card" id="card-first">
+      <div class="num-label">First Roll</div>
+      <div class="num-value" id="card-first-val">—</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="num-card" id="card-second">
+      <div class="num-label">Second Roll</div>
+      <div class="num-value" id="card-second-val">?</div>
+    </div>
   </div>
 
-  <div class="input-area" id="input-area">
+  <div class="hud hidden" id="hud">
+    <div class="hud-item">
+      <span class="hud-label">Cash</span>
+      <span class="hud-val" id="hud-cash">$1,000</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Net</span>
+      <span class="hud-val" id="hud-net">$0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Round</span>
+      <span class="hud-val" id="hud-round">1</span>
+    </div>
+  </div>
+
+  <div class="input-area hidden" id="input-area">
     <span class="prompt" id="prompt-label">&gt;</span>
     <input type="text" id="user-input" autocomplete="off" autocorrect="off" spellcheck="false" />
   </div>
 
   <div class="btn-row" id="btn-row"></div>
+  <div class="footer-hint" id="footer-hint">PRESS ENTER TO CONFIRM · CLICK BUTTONS TO SELECT</div>
 </div>
 
 <script>
-
-const output = document.getElementById('output');
-const inputEl = document.getElementById('user-input');
+const output    = document.getElementById('output');
+const inputEl   = document.getElementById('user-input');
 const inputArea = document.getElementById('input-area');
-const btnRow = document.getElementById('btn-row');
-const hud = document.getElementById('hud');
-const hudCash = document.getElementById('hud-cash');
-const hudNet = document.getElementById('hud-net');
-const hudRound = document.getElementById('hud-round');
+const btnRow    = document.getElementById('btn-row');
+const hud       = document.getElementById('hud');
+const hudCash   = document.getElementById('hud-cash');
+const hudNet    = document.getElementById('hud-net');
+const hudRound  = document.getElementById('hud-round');
 const promptLabel = document.getElementById('prompt-label');
+const numDisplay  = document.getElementById('num-display');
+const cardFirst   = document.getElementById('card-first');
+const cardSecond  = document.getElementById('card-second');
+const cardFirstVal  = document.getElementById('card-first-val');
+const cardSecondVal = document.getElementById('card-second-val');
+const terminal = document.getElementById('terminal');
 
 let state = {
   phase: 'name',
@@ -193,13 +527,25 @@ let state = {
   addedCash: 0
 };
 
-function print(text, cls = '') {
-  const el = document.createElement('span');
-  el.className = 'line' + (cls ? ' ' + cls : '');
-  el.textContent = text;
-  output.appendChild(el);
-  output.appendChild(document.createElement('br'));
-  output.scrollTop = output.scrollHeight;
+// ── Print ──
+function print(text, cls = '', delay = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const el = document.createElement('span');
+      el.className = 'line animate-in' + (cls ? ' ' + cls : '');
+      el.textContent = text;
+      output.appendChild(el);
+      output.appendChild(document.createElement('br'));
+      output.scrollTop = output.scrollHeight;
+      resolve();
+    }, delay);
+  });
+}
+
+async function printLines(lines, baseDelay = 0, step = 60) {
+  for (let i = 0; i < lines.length; i++) {
+    await print(lines[i][0], lines[i][1] || '', baseDelay + i * step);
+  }
 }
 
 function clearButtons() { btnRow.innerHTML = ''; }
@@ -210,6 +556,7 @@ function addButton(label, cls, onClick) {
   btn.className = cls;
   btn.onclick = onClick;
   btnRow.appendChild(btn);
+  return btn;
 }
 
 function showInput(type = 'text', placeholder = '') {
@@ -217,7 +564,7 @@ function showInput(type = 'text', placeholder = '') {
   inputEl.type = type;
   inputEl.placeholder = placeholder;
   inputEl.value = '';
-  inputEl.focus();
+  setTimeout(() => inputEl.focus(), 50);
 }
 
 function hideInput() {
@@ -225,14 +572,23 @@ function hideInput() {
   clearButtons();
 }
 
-function updateHUD() {
-  hudCash.textContent = state.cash.toLocaleString();
+// ── HUD ──
+function updateHUD(animate = false) {
+  hudCash.textContent = '$' + state.cash.toLocaleString();
   const net = state.cash - state.startingCash;
   hudNet.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toLocaleString();
-  hudNet.style.color = net >= 0 ? '#3fb950' : '#f85149';
+  hudNet.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
   hudRound.textContent = state.round;
+  if (animate) {
+    [hudCash, hudNet, hudRound].forEach(el => {
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    });
+  }
 }
 
+// ── Helpers ──
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -244,59 +600,137 @@ function calcMagicNumber() {
   return s2;
 }
 
+// ── Coin burst animation ──
+function spawnCoins(x, y, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const coin = document.createElement('div');
+    coin.className = 'coin';
+    coin.textContent = ['💰','🪙','✨','💵'][Math.floor(Math.random()*4)];
+    const angle = (Math.random() * 360) * Math.PI / 180;
+    const dist  = 60 + Math.random() * 120;
+    coin.style.setProperty('--dx', (Math.cos(angle) * dist) + 'px');
+    coin.style.setProperty('--dy', (Math.sin(angle) * dist + 80) + 'px');
+    coin.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+    coin.style.setProperty('--dur', (0.8 + Math.random() * 0.6) + 's');
+    coin.style.left = x + 'px';
+    coin.style.top  = y + 'px';
+    coin.style.animationDelay = (Math.random() * 0.15) + 's';
+    document.body.appendChild(coin);
+    coin.addEventListener('animationend', () => coin.remove());
+  }
+}
+
+function flashTerminal(cls) {
+  const out = document.getElementById('output');
+  out.classList.remove('flash-win','flash-lose','flash-bonus');
+  void out.offsetWidth;
+  out.classList.add(cls);
+  setTimeout(() => out.classList.remove(cls), 800);
+}
+
+// ── Number Card ──
+function showNumberDisplay(first, second = null) {
+  numDisplay.classList.remove('hidden');
+  cardFirst.className = 'num-card';
+  cardSecond.className = 'num-card';
+  cardFirstVal.textContent = first.toLocaleString();
+  cardSecondVal.textContent = second !== null ? second.toLocaleString() : '?';
+
+  cardFirst.classList.add('flip-in');
+  if (second !== null) {
+    setTimeout(() => {
+      cardSecond.classList.add('flip-in','reveal');
+      cardSecondVal.textContent = second.toLocaleString();
+    }, 400);
+  }
+}
+
+function colorCards(result) {
+  // result: 'win' | 'lose' | 'tie'
+  setTimeout(() => {
+    if (result === 'win') {
+      cardFirst.classList.add('win');
+      cardSecond.classList.add('win');
+    } else if (result === 'lose') {
+      cardFirst.classList.add('lose');
+      cardSecond.classList.add('lose');
+      cardFirst.classList.add('shake');
+      cardSecond.classList.add('shake');
+    }
+  }, 550);
+}
+
+function hideNumberDisplay() {
+  numDisplay.classList.add('hidden');
+  cardFirst.className = 'num-card';
+  cardSecond.className = 'num-card';
+  cardFirstVal.textContent = '—';
+  cardSecondVal.textContent = '?';
+}
+
+// ── Input Handler ──
 function handleInput(val) {
   val = val.trim();
   if (!val) return;
   print('> ' + val, 'dim');
 
   switch (state.phase) {
-    case 'name': handleName(val); break;
+    case 'name':       handleName(val);       break;
     case 'difficulty': handleDifficulty(val); break;
-    case 'bet': handleBet(val); break;
-    case 'guess': handleGuess(val); break;
-    case 'addCash': handleAddCash(val); break;
+    case 'bet':        handleBet(val);        break;
+    case 'guess':      handleGuess(val);      break;
+    case 'addCash':    handleAddCash(val);    break;
     case 'addCashAmt': handleAddCashAmt(val); break;
-    case 'playAgain': handlePlayAgain(val); break;
+    case 'playAgain':  handlePlayAgain(val);  break;
   }
 }
 
+// ── Phases ──
 function handleName(val) {
   state.name = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-  print('');
-  print('╔══════════════════════════════════════════╗', 'cyan');
-  print('║     WELCOME TO SAM\'S HIGH/LOW GAMBLING   ║', 'cyan');
-  print('╚══════════════════════════════════════════╝', 'cyan');
-  print('');
-  print('Choose your difficulty:', 'bold');
-  print('  1 → Easy   (1 – 77)', 'dim');
-  print('  2 → Medium (1 – 7,777)', 'dim');
-  print('  3 → Hard   (1 – 7,777,777)', 'dim');
-  print('');
-  state.phase = 'difficulty';
-  showInput('text', '1, 2, or 3');
-  clearButtons();
-  addButton('1  Easy', 'secondary', () => handleInput('1'));
-  addButton('2  Medium', 'secondary', () => handleInput('2'));
-  addButton('3  Hard', 'secondary', () => handleInput('3'));
+  printLines([
+    [''],
+    ['╔══════════════════════════════════════════╗', 'cyan'],
+    ['║    WELCOME TO SAM\'S HIGH/LOW CASINO      ║', 'cyan'],
+    ['╚══════════════════════════════════════════╝', 'cyan'],
+    [''],
+    ['Choose your difficulty:', 'bold'],
+    ['  [1]  Easy   — numbers from 1 to 77', 'dim'],
+    ['  [2]  Medium — numbers from 1 to 7,777', 'dim'],
+    ['  [3]  Hard   — numbers from 1 to 7,777,777', 'dim'],
+    [''],
+  ], 0, 55);
+  setTimeout(() => {
+    state.phase = 'difficulty';
+    showInput('text', '1, 2, or 3');
+    clearButtons();
+    addButton('[1]  Easy', 'secondary', () => handleInput('1'));
+    addButton('[2]  Medium', 'secondary', () => handleInput('2'));
+    addButton('[3]  Hard', 'secondary', () => handleInput('3'));
+  }, 700);
 }
 
 function handleDifficulty(val) {
-  if (val === '1') { state.minVal = 1; state.maxVal = 77; print('Easy mode — numbers between 1 and 77.', 'yellow'); }
-  else if (val === '2') { state.minVal = 1; state.maxVal = 7777; print('Medium mode — numbers between 1 and 7,777.', 'yellow'); }
-  else if (val === '3') { state.minVal = 1; state.maxVal = 7777777; print('Hard mode — numbers between 1 and 7,777,777.', 'yellow'); }
+  if      (val === '1') { state.minVal = 1; state.maxVal = 77;      print('Easy mode — range 1 to 77.', 'yellow'); }
+  else if (val === '2') { state.minVal = 1; state.maxVal = 7777;    print('Medium mode — range 1 to 7,777.', 'yellow'); }
+  else if (val === '3') { state.minVal = 1; state.maxVal = 7777777; print('Hard mode — range 1 to 7,777,777.', 'yellow'); }
   else { print('Please enter 1, 2, or 3.', 'red'); return; }
 
-  print('Accessing profile for ' + state.name + '...', 'dim');
-  print('Cash available to wager: $' + state.cash.toLocaleString(), 'green');
-  hud.classList.remove('hidden');
-  updateHUD();
-  startRound();
+  setTimeout(() => {
+    print('Accessing profile for ' + state.name + '...', 'dim');
+    print('Starting balance: $' + state.cash.toLocaleString(), 'green');
+    hud.classList.remove('hidden');
+    updateHUD();
+    setTimeout(startRound, 400);
+  }, 200);
 }
 
 function startRound() {
+  hideNumberDisplay();
   print('');
-  print('════════════════════════════════════════════', 'divider');
-  print('Round ' + state.round, 'bold');
+  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'divider');
+  print('  ROUND ' + state.round, 'bold');
+  print('');
   state.phase = 'bet';
   showInput('number', 'Enter bet amount');
   clearButtons();
@@ -305,92 +739,131 @@ function startRound() {
       addButton('$' + amt, 'secondary', () => handleInput(String(amt)));
   });
   if (state.cash > 0)
-    addButton('All In $' + state.cash, 'danger', () => handleInput(String(state.cash)));
-  promptLabel.textContent = 'Bet $:';
+    addButton('⚡ All In  $' + state.cash.toLocaleString(), 'danger', () => handleInput(String(state.cash)));
+  promptLabel.textContent = 'BET $:';
 }
 
 function handleBet(val) {
   const bet = parseInt(val);
   if (isNaN(bet) || bet <= 0) { print('Bet must be greater than $0.', 'red'); return; }
   if (bet > state.cash) {
-    print('Not enough cash — capping bet at $' + state.cash + '.', 'yellow');
+    print('Capping bet at $' + state.cash.toLocaleString() + '.', 'yellow');
     state.currentBet = state.cash;
   } else {
     state.currentBet = bet;
   }
 
   state.firstNumber = randInt(state.minVal, state.maxVal);
-  state.magicNumber = calcMagicNumber();
+  state.magicNumber  = calcMagicNumber();
 
-  print('You are betting: $' + state.currentBet.toLocaleString(), 'yellow');
+  print('Wagering: $' + state.currentBet.toLocaleString(), 'yellow');
   print('');
-  print('🎲 First Number: ' + state.firstNumber.toLocaleString(), 'bold');
-  print('');
-  print('Will the next number be HIGHER or LOWER?');
-  state.phase = 'guess';
-  showInput('text', 'high or low');
-  clearButtons();
-  addButton('⬆  High', 'primary', () => handleInput('high'));
-  addButton('⬇  Low', 'secondary', () => handleInput('low'));
-  promptLabel.textContent = '>';
+
+  showNumberDisplay(state.firstNumber);
+
+  setTimeout(() => {
+    print('First roll: ' + state.firstNumber.toLocaleString(), 'bold');
+    print('Will the next number be HIGHER or LOWER?', '');
+    state.phase = 'guess';
+    showInput('text', 'high or low');
+    clearButtons();
+    addButton('▲  Higher', 'high-btn', () => handleInput('high'));
+    addButton('▼  Lower',  'low-btn',  () => handleInput('low'));
+    promptLabel.textContent = '>';
+  }, 500);
 }
 
 function handleGuess(val) {
   val = val.toLowerCase();
   if (val !== 'high' && val !== 'low') { print('Please type "high" or "low".', 'red'); return; }
 
-  const secondNumber = randInt(state.minVal, state.maxVal);
-  print('Your guess: ' + val + 'er');
-  print('🎲 Second Number: ' + secondNumber.toLocaleString(), 'bold');
-  print('');
+  hideInput();
+  print('Your call: ' + (val === 'high' ? '▲ Higher' : '▼ Lower'), 'dim');
+  print('Rolling...', 'dim');
 
-  let won = false;
-  if (secondNumber === state.firstNumber) {
-    print('⚖️  It\'s a tie — no change.', 'yellow');
-  } else if (secondNumber > state.firstNumber && val === 'high') {
-    print('✅ YOU WIN! +$' + state.currentBet.toLocaleString(), 'green');
-    state.cash += state.currentBet;
-    won = true;
-  } else if (secondNumber < state.firstNumber && val === 'low') {
-    print('✅ YOU WIN! +$' + state.currentBet.toLocaleString(), 'green');
-    state.cash += state.currentBet;
-    won = true;
-  } else {
-    print('❌ YOU LOSE! -$' + state.currentBet.toLocaleString(), 'red');
-    state.cash -= state.currentBet;
-  }
+  // Dramatic roll delay
+  setTimeout(() => {
+    const secondNumber = randInt(state.minVal, state.maxVal);
+    showNumberDisplay(state.firstNumber, secondNumber);
 
-  // Magic number bonus
-  if (state.magicNumber === Math.abs(secondNumber - state.firstNumber)) {
-    const bonus = state.currentBet * state.magicNumber;
-    print('');
-    print('✨ MAGIC NUMBER BONUS! +$' + bonus.toLocaleString(), 'bonus');
-    state.cash += bonus;
-  }
+    setTimeout(() => {
+      let result = 'tie';
+      if (secondNumber === state.firstNumber) {
+        result = 'tie';
+      } else if ((secondNumber > state.firstNumber && val === 'high') ||
+                 (secondNumber < state.firstNumber && val === 'low')) {
+        result = 'win';
+      } else {
+        result = 'lose';
+      }
 
-  print('');
-  print('Balance: $' + state.cash.toLocaleString() + '   |   Net: ' + (state.cash - state.startingCash >= 0 ? '+' : '') + '$' + (state.cash - state.startingCash).toLocaleString(), state.cash >= state.startingCash ? 'green' : 'red');
-  updateHUD();
+      colorCards(result);
 
-  if (state.cash <= 0) {
-    print('');
-    print('💸 You\'ve run out of cash!', 'red');
-    print('Game over, ' + state.name + '. Better luck next time!', 'bold');
-    hideInput();
-    clearButtons();
-    addButton('Play Again', 'primary', () => location.reload());
-    return;
-  }
+      setTimeout(() => {
+        if (secondNumber === state.firstNumber) {
+          flashTerminal('flash-win');
+          print('⚖  TIE — no change.', 'yellow');
+        } else if (result === 'win') {
+          state.cash += state.currentBet;
+          flashTerminal('flash-win');
+          print('✅  YOU WIN!  +$' + state.currentBet.toLocaleString(), 'green');
 
-  state.round++;
-  print('');
-  print('Would you like to add cash to your balance?');
-  state.phase = 'addCash';
-  showInput('text', 'yes or no');
-  clearButtons();
-  addButton('Yes, add cash', 'secondary', () => handleInput('yes'));
-  addButton('No thanks', 'primary', () => handleInput('no'));
-  promptLabel.textContent = '>';
+          // Coin burst from the winning card
+          const rect = cardSecond.getBoundingClientRect();
+          spawnCoins(rect.left + rect.width / 2, rect.top + rect.height / 2, 14);
+        } else {
+          state.cash -= state.currentBet;
+          flashTerminal('flash-lose');
+          terminal.classList.add('shake');
+          setTimeout(() => terminal.classList.remove('shake'), 500);
+          print('❌  YOU LOSE!  -$' + state.currentBet.toLocaleString(), 'red');
+        }
+
+        // Magic number bonus
+        if (state.magicNumber === Math.abs(secondNumber - state.firstNumber)) {
+          const bonus = state.currentBet * state.magicNumber;
+          setTimeout(() => {
+            flashTerminal('flash-bonus');
+            print('');
+            print('✨  MAGIC NUMBER BONUS!  +$' + bonus.toLocaleString(), 'bonus');
+            state.cash += bonus;
+            updateHUD(true);
+          }, 350);
+        }
+
+        setTimeout(() => {
+          print('');
+          print('Balance: $' + state.cash.toLocaleString() + '   Net: ' +
+            (state.cash - state.startingCash >= 0 ? '+' : '') + '$' +
+            (state.cash - state.startingCash).toLocaleString(),
+            state.cash >= state.startingCash ? 'green' : 'red');
+          updateHUD(true);
+
+          if (state.cash <= 0) {
+            print('');
+            print('💸  Out of cash — game over, ' + state.name + '!', 'red');
+            clearButtons();
+            addButton('▶  Play Again', 'primary', () => location.reload());
+            return;
+          }
+
+          state.round++;
+          setTimeout(() => {
+            print('');
+            print('Add cash to your balance?');
+            state.phase = 'addCash';
+            showInput('text', 'yes or no');
+            clearButtons();
+            addButton('Yes, add cash', 'secondary', () => handleInput('yes'));
+            addButton('No thanks',    'primary',   () => handleInput('no'));
+            promptLabel.textContent = '>';
+          }, 400);
+
+        }, 700);
+      }, 600); // after colorCards
+
+    }, 500); // after reveal
+  }, 700); // rolling delay
 }
 
 function handleAddCash(val) {
@@ -398,7 +871,7 @@ function handleAddCash(val) {
     state.phase = 'addCashAmt';
     showInput('number', 'Amount to add');
     clearButtons();
-    promptLabel.textContent = 'Add $:';
+    promptLabel.textContent = 'ADD $:';
   } else {
     askPlayAgain();
   }
@@ -409,8 +882,8 @@ function handleAddCashAmt(val) {
   if (isNaN(amt) || amt <= 0) { print('Please enter a valid amount.', 'red'); return; }
   state.cash += amt;
   state.addedCash += amt;
-  print('Added $' + amt.toLocaleString() + ' — new balance: $' + state.cash.toLocaleString(), 'green');
-  updateHUD();
+  print('Added $' + amt.toLocaleString() + '  →  Balance: $' + state.cash.toLocaleString(), 'green');
+  updateHUD(true);
   askPlayAgain();
 }
 
@@ -420,8 +893,8 @@ function askPlayAgain() {
   state.phase = 'playAgain';
   showInput('text', 'yes or no');
   clearButtons();
-  addButton('Yes, keep playing!', 'primary', () => handleInput('yes'));
-  addButton('No, cash out', 'secondary', () => handleInput('no'));
+  addButton('▶  Keep Playing', 'primary',    () => handleInput('yes'));
+  addButton('Cash Out',         'secondary', () => handleInput('no'));
   promptLabel.textContent = '>';
 }
 
@@ -431,23 +904,26 @@ function handlePlayAgain(val) {
   } else {
     print('');
     print('Thanks for playing, ' + state.name + '!', 'bold');
-    print('Final balance: $' + state.cash.toLocaleString(), 'green');
-    print('Net change: ' + (state.cash - state.startingCash >= 0 ? '+' : '') + '$' + (state.cash - state.startingCash).toLocaleString(), state.cash >= state.startingCash ? 'green' : 'red');
+    print('Final balance:  $' + state.cash.toLocaleString(), 'green');
+    const net = state.cash - state.startingCash;
+    print('Net change:     ' + (net >= 0 ? '+' : '') + '$' + net.toLocaleString(), net >= 0 ? 'green' : 'red');
     print('');
     print('Come back and try to beat the house! 🎰', 'cyan');
     hideInput();
     clearButtons();
-    addButton('Play Again', 'primary', () => location.reload());
+    addButton('▶  Play Again', 'primary', () => location.reload());
   }
 }
 
-// Boot
-print('Initializing Sam\'s High/Low Casino...', 'dim');
-print('');
-print('What is your name?');
-state.phase = 'name';
-showInput('text', 'Enter your name');
-promptLabel.textContent = '>';
+// ── Boot ──
+setTimeout(() => { print("Initializing Sam's High/Low Casino...", 'dim'); }, 0);
+setTimeout(() => { print('', ''); }, 200);
+setTimeout(() => {
+  print('What is your name?');
+  state.phase = 'name';
+  showInput('text', 'Enter your name');
+  promptLabel.textContent = '>';
+}, 600);
 
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
